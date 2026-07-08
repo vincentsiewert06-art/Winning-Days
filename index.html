@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>supabase-tagesstatus-dashboard-fix</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+      --space-1: .25rem; --space-2: .5rem; --space-3: .75rem; --space-4: 1rem;
+      --space-5: 1.25rem; --space-6: 1.5rem; --space-8: 2rem; --space-10: 2.5rem; --space-12: 3rem;
+      --radius-sm: .5rem; --radius-md: .85rem; --radius-lg: 1.25rem; --radius-full: 999px;
+      --font-body: 'Manrope', sans-serif;
+      --color-bg: #f7f6f2; --color-surface: #fffdf8; --color-surface-2: #f0ece5; --color-border: #d8d3ca;
+      --color-text: #222018; --color-text-muted: #706c63; --color-primary: #01696f; --color-primary-hover: #0c4e54;
+      --color-primary-soft: #d9eceb; --color-success: #437a22; --color-success-soft: #dce9d3;
+      --color-warning: #964219; --color-warning-soft: #f0ddd2; --color-error: #a13544; --color-error-soft: #f3d8dc;
+      --shadow-sm: 0 2px 10px rgba(34,32,24,0.06);
+    }
+    [data-theme="dark"] {
+      --color-bg: #171614; --color-surface: #201f1c; --color-surface-2: #2b2926; --color-border: #3d3934;
+      --color-text: #f1ede6; --color-text-muted: #b1aba0; --color-primary: #63aeb1; --color-primary-hover: #8bc3c4;
+      --color-primary-soft: #223436; --color-success: #7eb45b; --color-success-soft: #253321;
+      --color-warning: #d88a61; --color-warning-soft: #38271f; --color-error: #db7482; --color-error-soft: #3b2429;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: var(--font-body); background: linear-gradient(180deg, var(--color-bg), var(--color-surface-2)); color: var(--color-text); }
+    button, input, select, textarea { font: inherit; }
+    .app { width: min(1240px, calc(100% - 1rem)); margin: 0 auto; padding: var(--space-5) 0 var(--space-12); }
+    .topbar, .row { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+    .topbar { justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-5); }
+    .brand h1 { margin: 0 0 var(--space-2); font-size: var(--text-xl); }
+    .brand p { margin: 0; color: var(--color-text-muted); max-width: 70ch; }
+    .card { background: color-mix(in srgb, var(--color-surface) 92%, transparent); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-5); box-shadow: var(--shadow-sm); }
+    .stack { display: grid; gap: var(--space-4); }
+    .layout { display: grid; grid-template-columns: 360px 1fr; gap: var(--space-5); }
+    .input, .select, .btn, .ghost, .navbtn { border-radius: var(--radius-md); }
+    .input, .select { width: 100%; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); padding: .9rem 1rem; }
+    .btn, .ghost, .navbtn, .status-btn { border: 1px solid var(--color-border); padding: .9rem 1rem; cursor: pointer; }
+    .btn { background: var(--color-primary); border-color: var(--color-primary); color: white; font-weight: 700; }
+    .btn:hover { background: var(--color-primary-hover); }
+    .ghost, .navbtn, .status-btn { background: var(--color-surface); color: var(--color-text); }
+    .small { font-size: var(--text-sm); }
+    .muted { color: var(--color-text-muted); }
+    .login-box { max-width: 520px; margin: 6vh auto 0; }
+    .hidden { display: none !important; }
+    .status-line { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+    .badge { display: inline-flex; align-items: center; border-radius: var(--radius-full); padding: .4rem .75rem; border: 1px solid var(--color-border); background: var(--color-surface-2); font-size: var(--text-xs); font-weight: 700; }
+    .toolbar, .summary-grid { display: grid; gap: var(--space-3); }
+    .toolbar { grid-template-columns: repeat(2, 1fr); }
+    .summary-grid { grid-template-columns: repeat(3, 1fr); }
+    .pill { border-radius: var(--radius-md); padding: var(--space-4); border: 1px solid var(--color-border); background: var(--color-bg); }
+    .pill strong { display: block; font-size: var(--text-lg); }
+    .people-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: var(--space-4); }
+    .person-card { border: 1px solid var(--color-border); background: var(--color-bg); border-radius: var(--radius-lg); padding: var(--space-4); display: grid; gap: var(--space-3); }
+    .person-head { display: flex; justify-content: space-between; gap: var(--space-3); align-items: start; }
+    .person-title { display: flex; gap: .65rem; align-items: center; font-weight: 800; }
+    .dot { width: .9rem; height: .9rem; border-radius: 50%; background: var(--color-primary); }
+    .status-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+    .status-btn { padding: .7rem .85rem; border-radius: var(--radius-full); font-weight: 700; }
+    .status-btn.active.done { background: var(--color-success-soft); border-color: var(--color-success); }
+    .status-btn.active.notdone { background: var(--color-error-soft); border-color: var(--color-error); }
+    .status-btn.active.open { background: var(--color-warning-soft); border-color: var(--color-warning); }
+    .table { width: 100%; border-collapse: collapse; }
+    .table th, .table td { text-align: left; padding: .75rem .5rem; border-bottom: 1px solid var(--color-border); vertical-align: top; }
+    .status-badge { display:inline-flex; border-radius: var(--radius-full); padding: .35rem .7rem; font-size: var(--text-xs); font-weight: 800; }
+    .status-done { background: var(--color-success-soft); color: var(--color-success); }
+    .status-notdone { background: var(--color-error-soft); color: var(--color-error); }
+    .status-open { background: var(--color-warning-soft); color: var(--color-warning); }
+    .empty { padding: var(--space-5); border-radius: var(--radius-md); border: 1px dashed var(--color-border); background: var(--color-bg); color: var(--color-text-muted); }
+    .message { padding: .85rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--color-border); }
+    .message.error { background: var(--color-error-soft); color: var(--color-error); border-color: var(--color-error); }
+    .message.success { background: var(--color-success-soft); color: var(--color-success); border-color: var(--color-success); }
+    textarea { resize: vertical; }
+    @media (max-width: 980px) { .layout, .toolbar, .summary-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section id="setupView" class="login-box card stack">
+      <div>
+        <h1>Supabase Tagesstatus Dashboard</h1>
+        <p class="muted">Ein zentrales Dashboard für alle Personen auf einen Blick. Nur ein Admin-Login, danach alles in einer Übersicht.</p>
+      </div>
+
+      <div class="stack">
+        <label class="small">Supabase URL</label>
+        <input id="supabaseUrl" class="input" placeholder="https://deinprojekt.supabase.co" />
+      </div>
+
+      <div class="stack">
+        <label class="small">Supabase Anon Key</label>
+        <textarea id="supabaseKey" class="input" rows="4" placeholder="eyJ..." ></textarea>
+      </div>
+
+      <div class="stack">
+        <label class="small">Admin E-Mail</label>
+        <input id="email" class="input" type="email" placeholder="admin@example.com" />
+      </div>
+
+      <div class="stack">
+        <label class="small">Passwort</label>
+        <input id="password" class="input" type="password" placeholder="••••••••" />
+      </div>
+
+      <div class="row">
+        <button id="loginBtn" class="btn">Einloggen</button>
+        <button id="logoutBtn" class="ghost hidden">Logout</button>
+        <button id="themeToggle" class="ghost">🌙 / ☀️</button>
+      </div>
+
+      <div id="loginMessage" class="small muted">Vor dem ersten Login unten die SQL-Struktur in Supabase anlegen.</div>
+
+      <div class="card stack">
+        <h3>SQL für Supabase</h3>
+        <p class="small muted">Diese SQL einmal im Supabase SQL Editor ausführen.</p>
+        <textarea id="sqlBlock" class="input" rows="16" readonly></textarea>
+      </div>
+    </section>
+
+    <section id="appView" class="hidden stack">
+      <div class="topbar">
+        <div class="brand">
+          <h1>Supabase Tagesstatus Dashboard</h1>
+          <p>Alle Personen auf einen Blick. Status pro aktivem Tag nach deutscher Zeit 23:00 bis 22:59.</p>
+        </div>
+        <div class="row">
+          <button id="appThemeToggle" class="ghost">🌙 / ☀️</button>
+          <button id="appLogoutBtn" class="ghost">Logout</button>
+        </div>
+      </div>
+
+      <div class="layout">
+        <aside class="stack">
+          <div class="card stack">
+            <h2>Person anlegen</h2>
+            <input id="personName" class="input" placeholder="Name" />
+            <button id="addPersonBtn" class="btn">Person speichern</button>
+          </div>
+
+          <div class="card stack">
+            <h2>Tag wählen</h2>
+            <div class="row">
+              <button id="prevDayBtn" class="navbtn">← Zurück</button>
+              <button id="nextDayBtn" class="navbtn">Weiter →</button>
+            </div>
+            <input id="dayInput" class="input" type="date" />
+            <div class="status-line">
+              <span id="autoDayBadge" class="badge">Automatisch: -</span>
+              <span id="selectedDayBadge" class="badge">Ausgewählt: -</span>
+            </div>
+          </div>
+
+          <div class="card stack">
+            <h2>Aktionen</h2>
+            <div class="toolbar">
+              <button id="refreshBtn" class="ghost">Aktualisieren</button>
+              <button id="exportCsvBtn" class="ghost">CSV Export</button>
+            </div>
+          </div>
+
+          <div class="card stack">
+            <h2>Hinweis</h2>
+            <p class="small muted">Nur der Admin loggt sich ein. Die Personen selbst brauchen in dieser Version keinen eigenen Login.</p>
+          </div>
+        </aside>
+
+        <section class="stack">
+          <div class="card stack">
+            <h2>Übersicht</h2>
+            <div id="summaryGrid" class="summary-grid"></div>
+          </div>
+
+          <div class="card stack">
+            <h2>Personen</h2>
+            <div id="peopleGrid" class="people-grid"></div>
+          </div>
+
+          <div class="card stack">
+            <h2>Historie</h2>
+            <div id="historyWrap"></div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SQL_SETUP = `create extension if not exists pgcrypto;
+
+create table if not exists public.people (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.day_status (
+  id uuid primary key default gen_random_uuid(),
+  person_id uuid not null references public.people(id) on delete cascade,
+  business_day date not null,
+  status text not null check (status in ('done','notdone','open')),
+  updated_at timestamptz not null default now(),
+  unique (person_id, business_day)
+);
+
+alter table public.people enable row level security;
+alter table public.day_status enable row level security;
+
+drop policy if exists "authenticated can read people" on public.people;
+drop policy if exists "authenticated can insert people" on public.people;
+drop policy if exists "authenticated can update people" on public.people;
+drop policy if exists "authenticated can delete people" on public.people;
+drop policy if exists "authenticated can read day_status" on public.day_status;
+drop policy if exists "authenticated can insert day_status" on public.day_status;
+drop policy if exists "authenticated can update day_status" on public.day_status;
+drop policy if exists "authenticated can delete day_status" on public.day_status;
+
+create policy "authenticated can read people" on public.people
+for select to authenticated using (true);
+
+create policy "authenticated can insert people" on public.people
+for insert to authenticated with check (true);
+
+create policy "authenticated can update people" on public.people
+for update to authenticated using (true);
+
+create policy "authenticated can delete people" on public.people
+for delete to authenticated using (true);
+
+create policy "authenticated can read day_status" on public.day_status
+for select to authenticated using (true);
+
+create policy "authenticated can insert day_status" on public.day_status
+for insert to authenticated with check (true);
+
+create policy "authenticated can update day_status" on public.day_status
+for update to authenticated using (true);
+
+create policy "authenticated can delete day_status" on public.day_status
+for delete to authenticated using (true);`;
+
+    const setupView = document.getElementById('setupView');
+    const appView = document.getElementById('appView');
+    const supabaseUrlInput = document.getElementById('supabaseUrl');
+    const supabaseKeyInput = document.getElementById('supabaseKey');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const appLogoutBtn = document.getElementById('appLogoutBtn');
+    const loginMessage = document.getElementById('loginMessage');
+    const sqlBlock = document.getElementById('sqlBlock');
+    const personNameInput = document.getElementById('personName');
+    const addPersonBtn = document.getElementById('addPersonBtn');
+    const prevDayBtn = document.getElementById('prevDayBtn');
+    const nextDayBtn = document.getElementById('nextDayBtn');
+    const dayInput = document.getElementById('dayInput');
+    const autoDayBadge = document.getElementById('autoDayBadge');
+    const selectedDayBadge = document.getElementById('selectedDayBadge');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
+    const summaryGrid = document.getElementById('summaryGrid');
+    const peopleGrid = document.getElementById('peopleGrid');
+    const historyWrap = document.getElementById('historyWrap');
+    const themeToggle = document.getElementById('themeToggle');
+    const appThemeToggle = document.getElementById('appThemeToggle');
+
+    let supabaseClient = null;
+    let people = [];
+    let dayStatusMap = {};
+    let selectedDay = null;
+
+    sqlBlock.value = SQL_SETUP;
+
+    function setMessage(text, type = 'muted') {
+      loginMessage.className = type === 'error'
+        ? 'message error'
+        : type === 'success'
+        ? 'message success'
+        : 'small muted';
+      loginMessage.textContent = text;
+    }
+
+    function getGermanyNowParts() {
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Berlin',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false
+      });
+
+      const parts = Object.fromEntries(
+        formatter.formatToParts(new Date())
+          .filter(p => p.type !== 'literal')
+          .map(p => [p.type, p.value])
+      );
+
+      return {
+        year: Number(parts.year),
+        month: Number(parts.month),
+        day: Number(parts.day),
+        hour: Number(parts.hour)
+      };
+    }
+
+    function shiftDateString(dateStr, deltaDays) {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const utc = new Date(Date.UTC(y, m - 1, d));
+      utc.setUTCDate(utc.getUTCDate() + deltaDays);
+      return utc.toISOString().slice(0, 10);
+    }
+
+    function getActiveBusinessDay() {
+      const berlin = getGermanyNowParts();
+      const base = `${berlin.year}-${String(berlin.month).padStart(2, '0')}-${String(berlin.day).padStart(2, '0')}`;
+      return berlin.hour >= 23 ? shiftDateString(base, 1) : base;
+    }
+
+    function ensureSelectedDay() {
+      if (!selectedDay) selectedDay = getActiveBusinessDay();
+      dayInput.value = selectedDay;
+      autoDayBadge.textContent = `Automatisch: ${getActiveBusinessDay()}`;
+      selectedDayBadge.textContent = `Ausgewählt: ${selectedDay}`;
+    }
+
+    function statusLabel(status) {
+      if (status === 'done') return 'Erledigt';
+      if (status === 'notdone') return 'Nicht erledigt';
+      return 'Offen';
+    }
+
+    function initSupabase() {
+      const url = supabaseUrlInput.value.trim();
+      const key = supabaseKeyInput.value.trim();
+
+      if (!url || !key) {
+        throw new Error('Bitte Supabase URL und Anon Key eintragen.');
+      }
+
+      if (!window.supabase || !window.supabase.createClient) {
+        throw new Error('Supabase SDK wurde nicht geladen.');
+      }
+
+      supabaseClient = window.supabase.createClient(url, key);
+      return supabaseClient;
+    }
+
+    async function login() {
+      try {
+        loginBtn.disabled = true;
+        setMessage('Login läuft...', 'muted');
+
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+
+        if (!email || !password) {
+          throw new Error('Bitte E-Mail und Passwort eintragen.');
+        }
+
+        initSupabase();
+
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (error) throw error;
+        if (!data.session) throw new Error('Kein Login möglich. Bitte User und Passwort prüfen.');
+
+        setMessage('Login erfolgreich.', 'success');
+        logoutBtn.classList.remove('hidden');
+        setupView.classList.add('hidden');
+        appView.classList.remove('hidden');
+        ensureSelectedDay();
+        await loadAllData();
+      } catch (err) {
+        console.error(err);
+        setMessage(`Login fehlgeschlagen: ${err.message}`, 'error');
+      } finally {
+        loginBtn.disabled = false;
+      }
+    }
+
+    async function logout() {
+      if (supabaseClient) {
+        await supabaseClient.auth.signOut();
+      }
+      appView.classList.add('hidden');
+      setupView.classList.remove('hidden');
+      setMessage('Abgemeldet.', 'muted');
+    }
+
+    async function loadPeople() {
+      const { data, error } = await supabaseClient
+        .from('people')
+        .select('*')
+        .eq('active', true)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      people = data || [];
+    }
+
+    async function loadStatuses() {
+      const { data, error } = await supabaseClient
+        .from('day_status')
+        .select('*')
+        .order('business_day', { ascending: false })
+        .limit(500);
+
+      if (error) throw error;
+
+      dayStatusMap = {};
+      (data || []).forEach(row => {
+        if (!dayStatusMap[row.business_day]) dayStatusMap[row.business_day] = {};
+        dayStatusMap[row.business_day][row.person_id] = row.status;
+      });
+    }
+
+    function renderSummary() {
+      const dayData = dayStatusMap[selectedDay] || {};
+      let done = 0, notdone = 0, open = 0;
+
+      people.forEach(person => {
+        const s = dayData[person.id] || 'open';
+        if (s === 'done') done++;
+        else if (s === 'notdone') notdone++;
+        else open++;
+      });
+
+      summaryGrid.innerHTML = `
+        <div class="pill"><strong>${done}</strong><span class="muted small">Erledigt</span></div>
+        <div class="pill"><strong>${notdone}</strong><span class="muted small">Nicht erledigt</span></div>
+        <div class="pill"><strong>${open}</strong><span class="muted small">Offen</span></div>
+      `;
+    }
+
+    function renderPeople() {
+      if (!people.length) {
+        peopleGrid.innerHTML = `<div class="empty">Noch keine Personen vorhanden.</div>`;
+        return;
+      }
+
+      const dayData = dayStatusMap[selectedDay] || {};
+
+      peopleGrid.innerHTML = people.map(person => {
+        const current = dayData[person.id] || 'open';
+        return `
+          <div class="person-card">
+            <div class="person-head">
+              <div>
+                <div class="person-title"><span class="dot"></span>${person.name}</div>
+                <div class="small muted">Status für ${selectedDay}: ${statusLabel(current)}</div>
+              </div>
+              <button class="ghost" data-remove="${person.id}">Entfernen</button>
+            </div>
+            <div class="status-actions">
+              <button class="status-btn ${current === 'done' ? 'active done' : ''}" data-id="${person.id}" data-status="done">Erledigt</button>
+              <button class="status-btn ${current === 'notdone' ? 'active notdone' : ''}" data-id="${person.id}" data-status="notdone">Nicht erledigt</button>
+              <button class="status-btn ${current === 'open' ? 'active open' : ''}" data-id="${person.id}" data-status="open">Offen</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      peopleGrid.querySelectorAll('[data-status]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          await saveStatus(btn.dataset.id, btn.dataset.status);
+        });
+      });
+
+      peopleGrid.querySelectorAll('[data-remove]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          await removePerson(btn.dataset.remove);
+        });
+      });
+    }
+
+    function renderHistory() {
+      const days = Object.keys(dayStatusMap).sort().reverse();
+
+      if (!days.length) {
+        historyWrap.innerHTML = `<div class="empty">Noch keine Historie vorhanden.</div>`;
+        return;
+      }
+
+      const personMap = Object.fromEntries(people.map(p => [p.id, p.name]));
+      const rows = [];
+
+      days.forEach(day => {
+        const entries = dayStatusMap[day] || {};
+        Object.entries(entries).forEach(([personId, status]) => {
+          rows.push(`
+            <tr>
+              <td>${day}</td>
+              <td>${personMap[personId] || 'Gelöschte Person'}</td>
+              <td><span class="status-badge status-${status}">${statusLabel(status)}</span></td>
+            </tr>
+          `);
+        });
+      });
+
+      historyWrap.innerHTML = `
+        <table class="table">
+          <thead>
+            <tr><th>Tag</th><th>Person</th><th>Status</th></tr>
+          </thead>
+          <tbody>${rows.join('')}</tbody>
+        </table>
+      `;
+    }
+
+    function renderAll() {
+      ensureSelectedDay();
+      renderSummary();
+      renderPeople();
+      renderHistory();
+    }
+
+    async function loadAllData() {
+      try {
+        await loadPeople();
+        await loadStatuses();
+        renderAll();
+      } catch (err) {
+        console.error(err);
+        alert('Fehler beim Laden der Daten: ' + err.message);
+      }
+    }
+
+    async function addPerson() {
+      const name = personNameInput.value.trim();
+      if (!name) {
+        alert('Bitte einen Namen eingeben.');
+        return;
+      }
+
+      const { error } = await supabaseClient
+        .from('people')
+        .insert([{ name }]);
+
+      if (error) {
+        alert('Fehler beim Speichern: ' + error.message);
+        return;
+      }
+
+      personNameInput.value = '';
+      await loadAllData();
+    }
+
+    async function saveStatus(personId, status) {
+      const { error } = await supabaseClient
+        .from('day_status')
+        .upsert([{
+          person_id: personId,
+          business_day: selectedDay,
+          status,
+          updated_at: new Date().toISOString()
+        }], { onConflict: 'person_id,business_day' });
+
+      if (error) {
+        alert('Fehler beim Speichern des Status: ' + error.message);
+        return;
+      }
+
+      await loadAllData();
+    }
+
+    async function removePerson(personId) {
+      const ok = confirm('Person wirklich entfernen?');
+      if (!ok) return;
+
+      const { error } = await supabaseClient
+        .from('people')
+        .update({ active: false })
+        .eq('id', personId);
+
+      if (error) {
+        alert('Fehler beim Entfernen: ' + error.message);
+        return;
+      }
+
+      await loadAllData();
+    }
+
+    function exportCsv() {
+      const rows = [['Tag', 'Person', 'Status']];
+      const personMap = Object.fromEntries(people.map(p => [p.id, p.name]));
+
+      Object.keys(dayStatusMap).sort().forEach(day => {
+        Object.entries(dayStatusMap[day]).forEach(([personId, status]) => {
+          rows.push([day, personMap[personId] || 'Gelöschte Person', statusLabel(status)]);
+        });
+      });
+
+      const csv = rows.map(row =>
+        row.map(cell => `"${String(cell).replaceAll('"', '""')}"`).join(';')
+      ).join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `tagesstatus-${selectedDay}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function switchTheme() {
+      const root = document.documentElement;
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+    }
+
+    loginBtn.addEventListener('click', login);
+    logoutBtn.addEventListener('click', logout);
+    appLogoutBtn.addEventListener('click', logout);
+    addPersonBtn.addEventListener('click', addPerson);
+    refreshBtn.addEventListener('click', loadAllData);
+    exportCsvBtn.addEventListener('click', exportCsv);
+    themeToggle.addEventListener('click', switchTheme);
+    appThemeToggle.addEventListener('click', switchTheme);
+
+    dayInput.addEventListener('change', () => {
+      selectedDay = dayInput.value;
+      renderAll();
+    });
+
+    prevDayBtn.addEventListener('click', () => {
+      ensureSelectedDay();
+      selectedDay = shiftDateString(selectedDay, -1);
+      renderAll();
+    });
+
+    nextDayBtn.addEventListener('click', () => {
+      ensureSelectedDay();
+      selectedDay = shiftDateString(selectedDay, 1);
+      renderAll();
+    });
+
+    personNameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addPerson();
+    });
+
+    ensureSelectedDay();
+  </script>
+</body>
+</html>
