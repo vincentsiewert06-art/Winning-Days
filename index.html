@@ -474,7 +474,7 @@
 
         const { error } = await supabaseClient
           .from('people')
-          .insert([{ name, active: true }], { returning: 'minimal' });
+          .insert([{ name, active: true }]);
 
         if (error) throw error;
 
@@ -593,3 +593,4 @@
   </script>
 </body>
 </html>
+
