@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>supabase-tagesstatus-dashboard-fix</title>
+  <title>winning-days-index</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -86,18 +86,8 @@
   <main class="app">
     <section id="setupView" class="login-box card stack">
       <div>
-        <h1>Supabase Tagesstatus Dashboard</h1>
-        <p class="muted">Ein zentrales Dashboard für alle Personen auf einen Blick. Nur ein Admin-Login, danach alles in einer Übersicht.</p>
-      </div>
-
-      <div class="stack">
-        <label class="small">Supabase URL</label>
-        <input id="supabaseUrl" class="input" placeholder="https://deinprojekt.supabase.co" />
-      </div>
-
-      <div class="stack">
-        <label class="small">Supabase Anon Key</label>
-        <textarea id="supabaseKey" class="input" rows="4" placeholder="eyJ..." ></textarea>
+        <h1>Winning Days Dashboard</h1>
+        <p class="muted">Ein zentrales Dashboard für alle Personen auf einen Blick. Login bleibt automatisch aktiv, solange die Supabase-Session gültig ist.</p>
       </div>
 
       <div class="stack">
@@ -116,19 +106,13 @@
         <button id="themeToggle" class="ghost">🌙 / ☀️</button>
       </div>
 
-      <div id="loginMessage" class="small muted">Vor dem ersten Login unten die SQL-Struktur in Supabase anlegen.</div>
-
-      <div class="card stack">
-        <h3>SQL für Supabase</h3>
-        <p class="small muted">Diese SQL einmal im Supabase SQL Editor ausführen.</p>
-        <textarea id="sqlBlock" class="input" rows="16" readonly></textarea>
-      </div>
+      <div id="loginMessage" class="small muted">Wenn du schon eingeloggt bist, springt die Seite automatisch ins Dashboard.</div>
     </section>
 
     <section id="appView" class="hidden stack">
       <div class="topbar">
         <div class="brand">
-          <h1>Supabase Tagesstatus Dashboard</h1>
+          <h1>Winning Days Dashboard</h1>
           <p>Alle Personen auf einen Blick. Status pro aktivem Tag nach deutscher Zeit 23:00 bis 22:59.</p>
         </div>
         <div class="row">
@@ -165,11 +149,6 @@
               <button id="exportCsvBtn" class="ghost">CSV Export</button>
             </div>
           </div>
-
-          <div class="card stack">
-            <h2>Hinweis</h2>
-            <p class="small muted">Nur der Admin loggt sich ein. Die Personen selbst brauchen in dieser Version keinen eigenen Login.</p>
-          </div>
         </aside>
 
         <section class="stack">
@@ -194,71 +173,17 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    const SQL_SETUP = `create extension if not exists pgcrypto;
-
-create table if not exists public.people (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  active boolean not null default true,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists public.day_status (
-  id uuid primary key default gen_random_uuid(),
-  person_id uuid not null references public.people(id) on delete cascade,
-  business_day date not null,
-  status text not null check (status in ('done','notdone','open')),
-  updated_at timestamptz not null default now(),
-  unique (person_id, business_day)
-);
-
-alter table public.people enable row level security;
-alter table public.day_status enable row level security;
-
-drop policy if exists "authenticated can read people" on public.people;
-drop policy if exists "authenticated can insert people" on public.people;
-drop policy if exists "authenticated can update people" on public.people;
-drop policy if exists "authenticated can delete people" on public.people;
-drop policy if exists "authenticated can read day_status" on public.day_status;
-drop policy if exists "authenticated can insert day_status" on public.day_status;
-drop policy if exists "authenticated can update day_status" on public.day_status;
-drop policy if exists "authenticated can delete day_status" on public.day_status;
-
-create policy "authenticated can read people" on public.people
-for select to authenticated using (true);
-
-create policy "authenticated can insert people" on public.people
-for insert to authenticated with check (true);
-
-create policy "authenticated can update people" on public.people
-for update to authenticated using (true);
-
-create policy "authenticated can delete people" on public.people
-for delete to authenticated using (true);
-
-create policy "authenticated can read day_status" on public.day_status
-for select to authenticated using (true);
-
-create policy "authenticated can insert day_status" on public.day_status
-for insert to authenticated with check (true);
-
-create policy "authenticated can update day_status" on public.day_status
-for update to authenticated using (true);
-
-create policy "authenticated can delete day_status" on public.day_status
-for delete to authenticated using (true);`;
+    const SUPABASE_URL = 'https://ztzxnrfwbhbtcalabffs.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0enhucmZ3YmhidGNhbGFiZmZzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MzQ2NTg2MywiZXhwIjoyMDk5MDQxODYzfQ.kBfKlo79uOzh8kgL-KeZCJnyLEi1aQIfNG3sF_BFVo8';
 
     const setupView = document.getElementById('setupView');
     const appView = document.getElementById('appView');
-    const supabaseUrlInput = document.getElementById('supabaseUrl');
-    const supabaseKeyInput = document.getElementById('supabaseKey');
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
     const loginBtn = document.getElementById('loginBtn');
     const logoutBtn = document.getElementById('logoutBtn');
     const appLogoutBtn = document.getElementById('appLogoutBtn');
     const loginMessage = document.getElementById('loginMessage');
-    const sqlBlock = document.getElementById('sqlBlock');
     const personNameInput = document.getElementById('personName');
     const addPersonBtn = document.getElementById('addPersonBtn');
     const prevDayBtn = document.getElementById('prevDayBtn');
@@ -275,11 +200,10 @@ for delete to authenticated using (true);`;
     const appThemeToggle = document.getElementById('appThemeToggle');
 
     let supabaseClient = null;
+    let authWatcherBound = false;
     let people = [];
     let dayStatusMap = {};
     let selectedDay = null;
-
-    sqlBlock.value = SQL_SETUP;
 
     function setMessage(text, type = 'muted') {
       loginMessage.className = type === 'error'
@@ -339,19 +263,54 @@ for delete to authenticated using (true);`;
     }
 
     function initSupabase() {
-      const url = supabaseUrlInput.value.trim();
-      const key = supabaseKeyInput.value.trim();
-
-      if (!url || !key) {
-        throw new Error('Bitte Supabase URL und Anon Key eintragen.');
-      }
-
       if (!window.supabase || !window.supabase.createClient) {
         throw new Error('Supabase SDK wurde nicht geladen.');
       }
-
-      supabaseClient = window.supabase.createClient(url, key);
+      if (!supabaseClient) {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
       return supabaseClient;
+    }
+
+    async function showAppAfterLogin(messageText = '') {
+      setupView.classList.add('hidden');
+      appView.classList.remove('hidden');
+      logoutBtn.classList.remove('hidden');
+      ensureSelectedDay();
+      await loadAllData();
+      if (messageText) setMessage(messageText, 'success');
+    }
+
+    function showLoginView(messageText = '') {
+      appView.classList.add('hidden');
+      setupView.classList.remove('hidden');
+      logoutBtn.classList.add('hidden');
+      if (messageText) setMessage(messageText, 'muted');
+    }
+
+    async function restoreSession() {
+      initSupabase();
+      const { data, error } = await supabaseClient.auth.getSession();
+      if (error) {
+        console.error(error);
+        return;
+      }
+      if (data.session) {
+        await showAppAfterLogin('Automatisch eingeloggt.');
+      }
+    }
+
+    function watchAuth() {
+      if (authWatcherBound) return;
+      authWatcherBound = true;
+      supabaseClient.auth.onAuthStateChange(async (event, session) => {
+        if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+          await showAppAfterLogin(event === 'SIGNED_IN' ? 'Login erfolgreich.' : 'Session aktiv.');
+        }
+        if (event === 'SIGNED_OUT') {
+          showLoginView('Abgemeldet.');
+        }
+      });
     }
 
     async function login() {
@@ -376,12 +335,7 @@ for delete to authenticated using (true);`;
         if (error) throw error;
         if (!data.session) throw new Error('Kein Login möglich. Bitte User und Passwort prüfen.');
 
-        setMessage('Login erfolgreich.', 'success');
-        logoutBtn.classList.remove('hidden');
-        setupView.classList.add('hidden');
-        appView.classList.remove('hidden');
-        ensureSelectedDay();
-        await loadAllData();
+        await showAppAfterLogin('Login erfolgreich.');
       } catch (err) {
         console.error(err);
         setMessage(`Login fehlgeschlagen: ${err.message}`, 'error');
@@ -394,9 +348,7 @@ for delete to authenticated using (true);`;
       if (supabaseClient) {
         await supabaseClient.auth.signOut();
       }
-      appView.classList.add('hidden');
-      setupView.classList.remove('hidden');
-      setMessage('Abgemeldet.', 'muted');
+      showLoginView('Abgemeldet.');
     }
 
     async function loadPeople() {
@@ -650,7 +602,17 @@ for delete to authenticated using (true);`;
       if (e.key === 'Enter') addPerson();
     });
 
-    ensureSelectedDay();
+    window.addEventListener('load', async () => {
+      try {
+        initSupabase();
+        watchAuth();
+        ensureSelectedDay();
+        await restoreSession();
+      } catch (e) {
+        console.error(e);
+        setMessage('Startfehler: ' + e.message, 'error');
+      }
+    });
   </script>
 </body>
 </html>
